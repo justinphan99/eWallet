@@ -10,28 +10,6 @@ class Server(BaseHTTPRequestHandler):
     def do_HEAD(self):
         return
 
-    # def do_GET(self):
-    #     split_path = os.path.splitext(self.path)
-    #     #print(">>>>>>>> self.path: ")
-    #     #print(self.path)
-    #     #print(">>>>>>>> request_extension: ")
-    #     request_extension = split_path[1]
-    #     #print(request_extension)
-
-    #     if self.path in routes:
-    #         handler = JsonHandler()
-    #         a = routes[self.path]
-    #         a.method = "GET"
-    #         handler.jsonParse(a.HelloController(''))
-    #         #print(handler.contents)
-
-    #     else:
-    #         handler = BadRequestHandler()
-
-    #     self.respond({
-    #         'handler': handler
-    #     })
-
     def do_GET(self):
         split_path = os.path.splitext(self.path)
         request_extension = split_path[1]
@@ -59,6 +37,7 @@ class Server(BaseHTTPRequestHandler):
             a = routes[self.path]
             a.method = "POST"
             handler = JsonHandler()
+            a.operation(post_data)
             handler.jsonParse(a.operation(post_data))
             print(handler.contents)
         else:
