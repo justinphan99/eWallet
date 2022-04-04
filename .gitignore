@@ -1,4 +1,11 @@
+# Distribution / packaging
+env/
+
+# dotenv
+.env
+
 # virtualenv
 .venv
 venv/
 ENV/
+
