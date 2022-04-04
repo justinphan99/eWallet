@@ -7,6 +7,7 @@ from app.response.badRequestHandler import BadRequestHandler
 import json
 
 class Server(BaseHTTPRequestHandler):
+
     def do_HEAD(self):
         return
 
@@ -27,10 +28,9 @@ class Server(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length']) 
         post_data = self.rfile.read(content_length) 
-        print(post_data)
         post_data = json.loads(post_data.decode().replace("'", '"'))
+        print(type(post_data))
         print(post_data)
-
         split_path = os.path.splitext(self.path)
 
         if self.path in routes:
@@ -39,7 +39,6 @@ class Server(BaseHTTPRequestHandler):
             handler = JsonHandler()
             a.operation(post_data)
             handler.jsonParse(a.operation(post_data))
-            print(handler.contents)
         else:
             handler = BadRequestHandler()
 
@@ -65,5 +64,4 @@ class Server(BaseHTTPRequestHandler):
 
     def respond(self, opts):
         response = self.handle_http(opts['handler'])
-        print(response)
         self.wfile.write(response)

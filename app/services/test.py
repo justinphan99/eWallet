@@ -1,7 +1,7 @@
 def GetHello():
     return {
         "name": "Khoa",
-        "age": 15
+        "age": 23
     }
 
 def PostHello(data):
