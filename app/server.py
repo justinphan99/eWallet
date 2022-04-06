@@ -5,8 +5,9 @@ from app.routes.main import routes
 from app.response.jsonHandler import JsonHandler
 from app.response.stringHandler import StringHandler
 from app.response.badRequestHandler import BadRequestHandler
+from app.response.successResponse import SuccessResponse
 import json
-from app.controller.accountController import AccountAccountIdController, AccountTokenController
+from app.controller.accountController import AccountTokenController, AccountTopupController
 from app.utils.baseFunc import decode_auth_token
 
 class Server(BaseHTTPRequestHandler):
@@ -22,12 +23,11 @@ class Server(BaseHTTPRequestHandler):
                 temp = AccountTokenController()
                 temp.method = 'GET'
                 data = temp.operation('',accountId)
-                handler = StringHandler()
-                handler.stringParse(data)
-            elif self.path.split("/")[3] and self.path.split("/")[3] == 'topup':
-                token = str(self.headers['Authorization'])
-                accountId = decode_auth_token(token)
-                
+                token_data = decode_auth_token(data)
+                print(token_data)
+                handler = JsonHandler()
+                handler.jsonParse(data)
+
         elif self.path in routes:
             accountId = ''
             temp = routes[self.path]
@@ -45,15 +45,42 @@ class Server(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length) 
         post_data = json.loads(post_data.decode().replace("'", '"'))
-        print(type(post_data))
-        print(post_data)
         accountId = ''
-
-        if self.path in routes:
-            a = routes[self.path]
-            a.method = "POST"
+        token = str(self.headers['Authorization'])
+        if self.path.split("/")[2] and len(self.path.split("/")[2]) == 36:
+            accountId_URL = str(self.path.split("/")[2])
+            if self.path.split("/")[3] and self.path.split("/")[3] == 'topup':
+                print(token)
+                if token:
+                    accountId = decode_auth_token(token)
+                    print(">>>accountID: "+ str(accountId))
+                    temp = AccountTopupController()
+                    temp.method = "POST"
+                    accountType = temp.get_accountType(accountId)
+                    if accountType == 'issuer':
+                        response = temp.operation(post_data,accountId)
+                        if response == "200":
+                            handler = JsonHandler()
+                            handler.jsonParse(response)
+                        else:
+                            handler = BadRequestHandler()
+                    else:
+                        handler = BadRequestHandler()
+                else:
+                    handler = BadRequestHandler()
+        elif self.path in routes and token:
+            temp = routes[self.path]
+            print(self.path)
+            temp.method = "POST"
+            data = temp.operation(post_data, token)
             handler = JsonHandler()
-            handler.jsonParse(a.operation(post_data, accountId))
+            handler.jsonParse(data)
+
+        elif self.path in routes:
+            temp = routes[self.path]
+            temp.method = "POST"
+            handler = JsonHandler()
+            handler.jsonParse(temp.operation(post_data, accountId))
         else:
             handler = BadRequestHandler()
 

@@ -1,4 +1,4 @@
 class Config():
-    SECRET_KEY = 'Khoadeptrai123'
+    SECRET_KEY = 'Khoa123'
 
 key = Config.SECRET_KEY

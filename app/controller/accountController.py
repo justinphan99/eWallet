@@ -31,4 +31,7 @@ class AccountTopupController():
         if self.method == "GET":
             pass
         elif self.method == "POST":
-            pass
+            return topup_account(data,accountId)
+
+    def get_accountType(self, accountId):
+        return get_accountType(accountId)

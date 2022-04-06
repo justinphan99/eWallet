@@ -1,4 +1,5 @@
 from cgitb import handler
+from multiprocessing.connection import Connection
 import uuid
 import psycopg2
 from app.response.badRequestHandler import BadRequestHandler
@@ -71,10 +72,10 @@ def select_all_account():
             cur.close()
             conn.close()
 
-def select_an_account(account_id,conn):
+def select_an_account(accountId,conn):
     try:
         cur = conn.cursor()
-        cur.execute("""SELECT * FROM public.account WHERE account.accountId = '{}'""".format(account_id))
+        cur.execute("""SELECT * FROM public.account WHERE account.accountId = '{}'""".format(accountId))
         data = cur.fetchone()
         if data == ():
             return data
@@ -92,10 +93,7 @@ def select_an_account(account_id,conn):
     except Exception as e:
         print(">>> Cannot select an account from table account")
         print("Error: " +str(e))
-    finally:
-        if conn is not None:
-            cur.close()
-            conn.close()
+
 
 def create_an_account(data):
     accountType = str(data['accountType'])
@@ -131,7 +129,6 @@ def create_a_merchant_account(accountId, merchantId):
         conn.commit()    
         cur.close()
         print("create a merchant account")
-        return
     except Exception as e:
         print(">>> Cannot create account")
         print("Error: " +str(e))
@@ -150,3 +147,67 @@ def get_account_token(accountId):
     else:
         data = encode_auth_token(accountId)
         return data
+
+
+def get_accountType(accountId):
+    conn = connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT accountType FROM public.account WHERE account.accountId = '{}'""".format(accountId))
+        data = cur.fetchone()
+        return data[0]
+    except Exception as e:
+        print(">>> Cannot select an account from table account")
+        print("Error: " +str(e))
+
+def get_balance_account(accountId):
+    conn = connection()
+    try:
+        cur = conn.cursor()
+        query = """SELECT balance FROM public.account WHERE accountId = '{0}';""".format(accountId)
+        print(query)
+        cur.execute(query)
+        data = cur.fetchone()
+        print(data[0])
+        return data[0]
+    except Exception as e:
+        print(">>> Cannot select an account from table account")
+        print("Error: " +str(e))
+
+
+def topup_account(data, token_accountId):
+    conn = connection()
+    accountId = data['accountId']
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT balance FROM public.account WHERE account.accountId = '{}'
+        """.format(accountId))
+        balance = float(cur.fetchone()[0]) 
+        print(">>> balance: " + str(balance))
+        amount = balance + data['amount']
+        print(">>> amount: " + str(amount))
+        update_balance(accountId,amount)
+        return "200"
+    except Exception as e:
+        print(">>> Cannot select an account from table account")
+        print("Error: " +str(e))
+    finally:
+        if conn is not None:
+            cur.close()
+            conn.close()
+
+
+def update_balance(accountId, amount):
+    conn = connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""UPDATE public.account SET balance = {0}
+        WHERE account.accountId = '{1}'""".format(amount, accountId))
+        conn.commit()
+    except Exception as e:
+        print(">>> Cannot select an account from table account")
+        print("Error: " +str(e))
+    finally:
+        if conn is not None:
+            cur.close()
+            conn.close()

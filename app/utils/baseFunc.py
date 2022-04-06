@@ -5,8 +5,6 @@ import datetime
 def encode_auth_token(accountId: str):
         try:
             payload = {
-                'exp': datetime.datetime.utcnow(),
-                'iat': datetime.datetime.utcnow(),
                 'sub': accountId
             }
             return jwt.encode(
@@ -17,11 +15,9 @@ def encode_auth_token(accountId: str):
         except Exception as e:
             return e
 
-def decode_auth_token(auth_token: str):
+def decode_auth_token(auth_token):
         try:
-            payload = jwt.decode(auth_token, key)
+            payload = jwt.decode(auth_token, key, algorithms=["HS256"])
             return payload['sub']
-        except jwt.ExpiredSignatureError:
-            return 'Signature expired. Please log in again.'
-        except jwt.InvalidTokenError:
-            return 'Invalid token. Please log in again.'
+        except Exception as e:
+            print("error : " + str(e))

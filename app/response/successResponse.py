@@ -1,11 +1,10 @@
 from app.response.requestHandler import RequestHandler
 
-class BadRequestHandler(RequestHandler):
+class SuccessResponse(RequestHandler):
     def __init__(self):
         super().__init__()
         self.contentType = 'application/json'
         self.contents = {
-                "status": 404,
-                "message": "404 Not Found"
+                "status": 200
             }
-        self.setStatus(404)
+        self.setStatus(200)
