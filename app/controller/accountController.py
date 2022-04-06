@@ -5,11 +5,30 @@ class AccountController():
         self.method = None
         self.data = None
         
-    def operation(self,data):
+    def operation(self,data,accountId):
         if self.method == "GET":
             return select_all_account()
         elif self.method == "POST":
-            data = str(data['accountType'])
-            print(data)
-            return create_a_account(data)
-        return
+            return create_an_account(data)
+        
+class AccountTokenController():
+    def __init__(self):
+        self.method = None
+        self.data = None
+        
+    def operation(self,data,accountId):
+        if self.method == "GET":
+            return get_account_token(accountId)
+        elif self.method == "POST":
+            pass
+
+class AccountTopupController():
+    def __init__(self):
+        self.method = None
+        self.data = None
+        
+    def operation(self,data,accountId):
+        if self.method == "GET":
+            pass
+        elif self.method == "POST":
+            pass

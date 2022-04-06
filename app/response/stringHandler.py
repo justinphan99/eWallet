@@ -1,14 +1,14 @@
 import json
 from app.response.requestHandler import RequestHandler
 
-class JsonHandler(RequestHandler):
+class StringHandler(RequestHandler):
     def __init__(self):
         super().__init__()
         self.contentType = 'application/json'
 
-    def jsonParse(self, data):
+    def stringParse(self, data):
         try:
-            self.contents = json.dumps(data)
+            self.contents = data
             self.setStatus(200)
             return True
         except:

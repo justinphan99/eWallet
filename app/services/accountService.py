@@ -1,5 +1,8 @@
+from cgitb import handler
 import uuid
 import psycopg2
+from app.response.badRequestHandler import BadRequestHandler
+from app.utils.baseFunc import encode_auth_token,decode_auth_token
 
 def connection():
     try:
@@ -8,7 +11,6 @@ def connection():
         database="eWallet",
         user="admin",
         password="admin")
-        print(">>> Connect to Database succesfull")
     except Exception as e:
         print(">>> Cannot connect to Database")
         print("Error: " + str(e))
@@ -36,16 +38,15 @@ def create_table_account():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS public.account
             (
-                accountId UUID primary key,
+                accountId UUID PRIMARY KEY,
                 accountType accountType,
-                balance float
+                balance FLOAT DEFAULT 0,
+                merchantId UUID REFERENCES merchant(merchantId)
             ); 
         """)
         conn.commit()
         cur.close()
-        print(">>> Create table account successfully")
     except Exception as e:
-        print(">>> Cannot create table account")
         print("Error: " +str(e))
     finally:
         if conn is not None:
@@ -63,7 +64,7 @@ def select_all_account():
         print(">>> Select * from table account successfully")
         return data
     except Exception as e:
-        print(">>> Cannot select * from table account account")
+        print(">>> Cannot select * from table account")
         print("Error: " +str(e))
     finally:
         if conn is not None:
@@ -75,16 +76,19 @@ def select_an_account(account_id,conn):
         cur = conn.cursor()
         cur.execute("""SELECT * FROM public.account WHERE account.accountId = '{}'""".format(account_id))
         data = cur.fetchone()
-        accountType = data[1]
-        accountId = data[0]
-        balance = data[2]
-        data_dict = {
-            "accountType": accountType,
-            "accountId": accountId,
-            "balance": balance
-        }
-        data = data_dict
-        return data
+        if data == ():
+            return data
+        else:
+            accountType = data[1]
+            accountId = data[0]
+            balance = data[2]
+            data_dict = {
+                "accountType": accountType,
+                "accountId": accountId,
+                "balance": balance
+            }
+            data = data_dict
+            return data
     except Exception as e:
         print(">>> Cannot select an account from table account")
         print("Error: " +str(e))
@@ -93,15 +97,41 @@ def select_an_account(account_id,conn):
             cur.close()
             conn.close()
 
-def create_a_account(data):
+def create_an_account(data):
+    accountType = str(data['accountType'])
+
+    if accountType == 'personal' or accountType == 'issuer':
+        conn = connection()
+        try:
+            cur = conn.cursor()
+            accountId = str(uuid.uuid4())
+            cur.execute("""INSERT INTO public.account (accountId, accountType)
+            VALUES ('{0}','{1}')""".format(accountId,accountType))
+            conn.commit()    
+            data = select_an_account(accountId,conn) 
+            return data
+        except Exception as e:
+            print(">>> Cannot create account")
+            print("Error: " +str(e))
+        finally:
+            if conn is not None:
+                cur.close()
+                conn.close()
+    else:
+        handler = BadRequestHandler()
+        return handler
+
+def create_a_merchant_account(accountId, merchantId):
     conn = connection()
     try:
+        accountType = 'merchant'
         cur = conn.cursor()
-        account_id = str(uuid.uuid4())
-        cur.execute("""INSERT INTO public.account VALUES ('{0}','{1}')""".format(account_id,data))
+        cur.execute("""INSERT INTO public.account (accountId, accountType, merchantId)
+        VALUES ('{0}','{1}','{2}')""".format(accountId,accountType,merchantId))
         conn.commit()    
-        data = select_an_account(account_id,conn) 
-        return data
+        cur.close()
+        print("create a merchant account")
+        return
     except Exception as e:
         print(">>> Cannot create account")
         print("Error: " +str(e))
@@ -109,3 +139,14 @@ def create_a_account(data):
         if conn is not None:
             cur.close()
             conn.close()
+
+
+def get_account_token(accountId):
+    conn = connection()
+    data = select_an_account(accountId,conn)
+    if data == ():
+        handler = BadRequestHandler()
+        return handler
+    else:
+        data = encode_auth_token(accountId)
+        return data
