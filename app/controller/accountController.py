@@ -5,7 +5,7 @@ class AccountController():
         self.method = None
         self.data = None
         
-    def operation(self,data,accountId):
+    def operation(self,token,data,param,query):
         if self.method == "GET":
             return select_all_account()
         elif self.method == "POST":
@@ -16,9 +16,9 @@ class AccountTokenController():
         self.method = None
         self.data = None
         
-    def operation(self,data,accountId):
+    def operation(self,token,data,param,query):
         if self.method == "GET":
-            return get_account_token(accountId)
+            return get_account_token(param)
         elif self.method == "POST":
             pass
 
@@ -27,11 +27,8 @@ class AccountTopupController():
         self.method = None
         self.data = None
         
-    def operation(self,data,accountId):
+    def operation(self,token,data,param,query):
         if self.method == "GET":
             pass
         elif self.method == "POST":
-            return topup_account(data,accountId)
-
-    def get_accountType(self, accountId):
-        return get_accountType(accountId)
+            return topup_account(token,data,param)

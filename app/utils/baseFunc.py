@@ -1,6 +1,20 @@
 import jwt
 from app.utils.config import key
 import datetime
+import psycopg2
+
+def connection():
+    try:
+        conn = psycopg2.connect(
+        host="localhost",
+        database="eWallet",
+        user="admin",
+        password="admin")
+    except Exception as e:
+        print(">>> Cannot connect to Database")
+        print("Error: " + str(e))
+    return conn
+
 
 def encode_auth_token(accountId: str):
         try:
@@ -21,3 +35,4 @@ def decode_auth_token(auth_token):
             return payload['sub']
         except Exception as e:
             print("error : " + str(e))
+

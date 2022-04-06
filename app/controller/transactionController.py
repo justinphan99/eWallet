@@ -6,12 +6,12 @@ class TransactionCreateController():
         self.data = None
         self.accountId = None
         
-    def operation(self,data,token):
+    def operation(self,token,data,param,query):
         if self.method == "GET":
             pass
         elif self.method == "POST":
-            print("TransactionCreateController post")
-            return create_a_transaction(data, token)
+            print(">>> TransactionCreateController post")
+            return create_a_transaction(token, data)
 
 class TransactionConfirmController():
     def __init__(self):
@@ -19,12 +19,12 @@ class TransactionConfirmController():
         self.data = None
         self.accountId = None
         
-    def operation(self,data,token):
+    def operation(self,token,data,param,query):
         if self.method == "GET":
             pass
         elif self.method == "POST":
-            print("TransactionConfirmController post")
-            return confirm_a_transaction(data, token)
+            print(">>> TransactionConfirmController post")
+            return confirm_a_transaction(token, data)
 
 
 class TransactionVerifyController():
@@ -33,12 +33,12 @@ class TransactionVerifyController():
         self.data = None
         self.accountId = None
         
-    def operation(self,data,token):
+    def operation(self,token,data,param,query):
         if self.method == "GET":
             pass
         elif self.method == "POST":
-            print("TransactionVerifyController post")
-            return verify_a_transaction(data, token)
+            print(">>> TransactionVerifyController post")
+            return verify_a_transaction(token, data)
 
 
 class TransactionCancelController():
@@ -47,9 +47,9 @@ class TransactionCancelController():
         self.data = None
         self.accountId = None
         
-    def operation(self,data,token):
+    def operation(self,token,data,param,query):
         if self.method == "GET":
             pass
         elif self.method == "POST":
-            print("TransactionCancelController post")
-            return cancel_a_transaction(data, token)
+            print(">>> TransactionCancelController post")
+            return cancel_a_transaction(token, data)

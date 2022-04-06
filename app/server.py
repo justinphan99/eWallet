@@ -1,14 +1,11 @@
-import os
-
 from http.server import BaseHTTPRequestHandler
+from app.response.unauthorizedRequestHandler import UnauthorizedRequestHandler
 from app.routes.main import routes
 from app.response.jsonHandler import JsonHandler
-from app.response.stringHandler import StringHandler
 from app.response.badRequestHandler import BadRequestHandler
-from app.response.successResponse import SuccessResponse
 import json
-from app.controller.accountController import AccountTokenController, AccountTopupController
-from app.utils.baseFunc import decode_auth_token
+from app.utils.uuid import isValidUUID
+import re
 
 class Server(BaseHTTPRequestHandler):
 
@@ -16,71 +13,90 @@ class Server(BaseHTTPRequestHandler):
         return
 
     def do_GET(self):
-        print(self.path)
-        if self.path.split("/")[2] and len(self.path.split("/")[2]) == 36:
-            accountId = str(self.path.split("/")[2])
-            if self.path.split("/")[3] and self.path.split("/")[3] == 'token':
-                temp = AccountTokenController()
+        token = str(self.headers['Authorization'])
+        param = None
+        for i in self.path.split('/'):
+            if (isValidUUID(i)):
+                param = i
+        if (param == None):
+            if self.path in routes:
+                temp = routes[self.path]
                 temp.method = 'GET'
-                data = temp.operation('',accountId)
-                token_data = decode_auth_token(data)
-                print(token_data)
-                handler = JsonHandler()
-                handler.jsonParse(data)
-
-        elif self.path in routes:
-            accountId = ''
-            temp = routes[self.path]
-            temp.method = 'GET'
-            handler = JsonHandler()
-            handler.jsonParse(temp.operation('',accountId))
+                data = temp.operation(token,'', '', '')
+                if data == 401:
+                    handler = UnauthorizedRequestHandler()
+                elif data == 404:
+                    handler = BadRequestHandler()
+                else:
+                    handler = JsonHandler()
+                    handler.jsonParse(data)
+            else:
+                handler = BadRequestHandler()
+        elif (param != None):
+            tempRoutes = {}
+            handler = BadRequestHandler()
+            for key in routes.keys():
+                tempRoutes[re.sub('{.*}', param, key)] = routes[key]
+            if self.path in tempRoutes:
+                temp = tempRoutes[self.path]
+                temp.method = 'GET'
+                data = temp.operation(token,'', param, '')
+                if data == 401:
+                    handler = UnauthorizedRequestHandler()
+                elif data == 404:
+                    handler = BadRequestHandler()
+                else:
+                    handler = JsonHandler()
+                    handler.jsonParse(data)
+            
         else:
             handler = BadRequestHandler()
-        
         self.respond({
             'handler': handler
         })
 
     def do_POST(self):
+        token = str(self.headers['Authorization'])
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length) 
         post_data = json.loads(post_data.decode().replace("'", '"'))
-        accountId = ''
-        token = str(self.headers['Authorization'])
-        if self.path.split("/")[2] and len(self.path.split("/")[2]) == 36:
-            accountId_URL = str(self.path.split("/")[2])
-            if self.path.split("/")[3] and self.path.split("/")[3] == 'topup':
-                print(token)
-                if token:
-                    accountId = decode_auth_token(token)
-                    print(">>>accountID: "+ str(accountId))
-                    temp = AccountTopupController()
-                    temp.method = "POST"
-                    accountType = temp.get_accountType(accountId)
-                    if accountType == 'issuer':
-                        response = temp.operation(post_data,accountId)
-                        if response == "200":
-                            handler = JsonHandler()
-                            handler.jsonParse(response)
-                        else:
-                            handler = BadRequestHandler()
-                    else:
-                        handler = BadRequestHandler()
-                else:
-                    handler = BadRequestHandler()
-        elif self.path in routes and token:
-            temp = routes[self.path]
-            print(self.path)
-            temp.method = "POST"
-            data = temp.operation(post_data, token)
-            handler = JsonHandler()
-            handler.jsonParse(data)
+        param = None
+        for i in self.path.split('/'):
+            if (isValidUUID(i)):
+                param = i
+        if param == None:
+            if self.path in routes:
+                temp = routes[self.path]
+                temp.method = 'POST'
+                data = temp.operation(token, post_data, '', '')
 
-        elif self.path in routes:
-            temp = routes[self.path]
-            temp.method = "POST"
-            handler = JsonHandler()
-            handler.jsonParse(temp.operation(post_data, accountId))
+                if data == 401:
+                    handler = UnauthorizedRequestHandler()
+                elif data == 404:
+                    handler = BadRequestHandler()
+                else:
+                    handler = JsonHandler()
+                    handler.jsonParse(data)
+            else:
+                handler = BadRequestHandler()
+        elif (param != None):
+            tempRoutes = {}
+            handler = BadRequestHandler()
+            for key in routes.keys():
+                tempRoutes[re.sub('{.*}', param, key)] = routes[key]
+            if self.path in tempRoutes:
+                temp = tempRoutes[self.path]
+                temp.method = 'POST'
+                data = temp.operation(token,post_data, param, '')
+                if data == 401:
+                    handler = UnauthorizedRequestHandler()
+                elif data == 404:
+                    handler = BadRequestHandler()
+                else:
+                    handler = JsonHandler()
+                    handler.jsonParse(data)
+            else:
+                handler = BadRequestHandler()
         else:
             handler = BadRequestHandler()
 
@@ -91,15 +107,13 @@ class Server(BaseHTTPRequestHandler):
     def handle_http(self, handler):
         status_code = handler.getStatus()
         self.send_response(status_code)
+        self.send_header('Content-type', handler.getContentType())
 
         if status_code == 200:
             content = handler.getContents()
-            self.send_header('Content-type', handler.getContentType())
         else:
-            content = json.dumps({
-                "status": 404,
-                "message": "404 Not Found"
-            })
+            content = json.dumps(handler.getContents())
+
         self.end_headers()
 
         return content.encode()

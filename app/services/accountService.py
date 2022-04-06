@@ -1,72 +1,22 @@
-from cgitb import handler
-from multiprocessing.connection import Connection
 import uuid
-import psycopg2
 from app.response.badRequestHandler import BadRequestHandler
-from app.utils.baseFunc import encode_auth_token,decode_auth_token
-
-def connection():
-    try:
-        conn = psycopg2.connect(
-        host="localhost",
-        database="eWallet",
-        user="admin",
-        password="admin")
-    except Exception as e:
-        print(">>> Cannot connect to Database")
-        print("Error: " + str(e))
-    return conn
-
-def create_accountType():
-    conn = connection()
-    try:
-        cur = conn.cursor()
-        cur.execute("""CREATE TYPE accountType AS ENUM ('merchant', 'personal', 'issuer');""")
-        conn.commit()
-        cur.close()
-        print(">>> Create enum accountType successfully")
-    except Exception as e:
-        print(">>> Cannot create enum accountType")
-        print("Error: " +str(e))
-    finally:
-        if conn is not None:
-            conn.close()
-
-def create_table_account():
-    conn = connection()
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS public.account
-            (
-                accountId UUID PRIMARY KEY,
-                accountType accountType,
-                balance FLOAT DEFAULT 0,
-                merchantId UUID REFERENCES merchant(merchantId)
-            ); 
-        """)
-        conn.commit()
-        cur.close()
-    except Exception as e:
-        print("Error: " +str(e))
-    finally:
-        if conn is not None:
-            conn.close()
+from app.utils.baseFunc import encode_auth_token
+from app.utils.decorator import tokenIssuerRequired
+from app.utils.baseFunc import connection
 
 def select_all_account():
     conn = connection()
     try:
         cur = conn.cursor()
-        cur.execute("""
-            SELECT * FROM public.account;
-        """)
+        cur.execute("""SELECT * FROM public.account;""")
         data = cur.fetchall()
-        print(data)
-        print(">>> Select * from table account successfully")
+        print(">>> select_all_account successfully")
         return data
     except Exception as e:
-        print(">>> Cannot select * from table account")
+        print(">>> select_all_account failed")
         print("Error: " +str(e))
+        return 404
+
     finally:
         if conn is not None:
             cur.close()
@@ -77,7 +27,8 @@ def select_an_account(accountId,conn):
         cur = conn.cursor()
         cur.execute("""SELECT * FROM public.account WHERE account.accountId = '{}'""".format(accountId))
         data = cur.fetchone()
-        if data == ():
+        print(">>> select_an_account successfully")
+        if data == None:
             return data
         else:
             accountType = data[1]
@@ -91,13 +42,13 @@ def select_an_account(accountId,conn):
             data = data_dict
             return data
     except Exception as e:
-        print(">>> Cannot select an account from table account")
+        print(">>> select_an_account failed")
         print("Error: " +str(e))
+        return 404
 
 
 def create_an_account(data):
     accountType = str(data['accountType'])
-
     if accountType == 'personal' or accountType == 'issuer':
         conn = connection()
         try:
@@ -111,13 +62,16 @@ def create_an_account(data):
         except Exception as e:
             print(">>> Cannot create account")
             print("Error: " +str(e))
+            return 404
+
         finally:
             if conn is not None:
                 cur.close()
                 conn.close()
+    elif accountType == 'merchant':
+        return 403
     else:
-        handler = BadRequestHandler()
-        return handler
+        return 404
 
 def create_a_merchant_account(accountId, merchantId):
     conn = connection()
@@ -132,6 +86,8 @@ def create_a_merchant_account(accountId, merchantId):
     except Exception as e:
         print(">>> Cannot create account")
         print("Error: " +str(e))
+        return 404
+
     finally:
         if conn is not None:
             cur.close()
@@ -142,40 +98,14 @@ def get_account_token(accountId):
     conn = connection()
     data = select_an_account(accountId,conn)
     if data == ():
-        handler = BadRequestHandler()
-        return handler
+        return 404
     else:
         data = encode_auth_token(accountId)
         return data
 
 
-def get_accountType(accountId):
-    conn = connection()
-    try:
-        cur = conn.cursor()
-        cur.execute("""SELECT accountType FROM public.account WHERE account.accountId = '{}'""".format(accountId))
-        data = cur.fetchone()
-        return data[0]
-    except Exception as e:
-        print(">>> Cannot select an account from table account")
-        print("Error: " +str(e))
-
-def get_balance_account(accountId):
-    conn = connection()
-    try:
-        cur = conn.cursor()
-        query = """SELECT balance FROM public.account WHERE accountId = '{0}';""".format(accountId)
-        print(query)
-        cur.execute(query)
-        data = cur.fetchone()
-        print(data[0])
-        return data[0]
-    except Exception as e:
-        print(">>> Cannot select an account from table account")
-        print("Error: " +str(e))
-
-
-def topup_account(data, token_accountId):
+@tokenIssuerRequired
+def topup_account(token, data, param):
     conn = connection()
     accountId = data['accountId']
     try:
@@ -183,30 +113,17 @@ def topup_account(data, token_accountId):
         cur.execute("""SELECT balance FROM public.account WHERE account.accountId = '{}'
         """.format(accountId))
         balance = float(cur.fetchone()[0]) 
-        print(">>> balance: " + str(balance))
         amount = balance + data['amount']
-        print(">>> amount: " + str(amount))
-        update_balance(accountId,amount)
+
+        cur.execute("""UPDATE public.account SET balance = {0}
+        WHERE account.accountId = '{1}'""".format(amount, accountId))
+        conn.commit()
         return "200"
     except Exception as e:
         print(">>> Cannot select an account from table account")
         print("Error: " +str(e))
-    finally:
-        if conn is not None:
-            cur.close()
-            conn.close()
+        return 404
 
-
-def update_balance(accountId, amount):
-    conn = connection()
-    try:
-        cur = conn.cursor()
-        cur.execute("""UPDATE public.account SET balance = {0}
-        WHERE account.accountId = '{1}'""".format(amount, accountId))
-        conn.commit()
-    except Exception as e:
-        print(">>> Cannot select an account from table account")
-        print("Error: " +str(e))
     finally:
         if conn is not None:
             cur.close()

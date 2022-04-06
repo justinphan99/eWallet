@@ -6,7 +6,7 @@ class MerchantController():
         self.data = None
         self.accountId = None
         
-    def operation(self,data,accountId):
+    def operation(self,token,data,param,query):
         if self.method == "GET":
             return select_a_merchant()
         elif self.method == "POST":
