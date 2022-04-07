@@ -1,5 +1,5 @@
 from app.controller.accountController import AccountController, AccountTokenController, AccountTopupController
-from app.controller.merchantController import MerchantController
+from app.controller.merchantController import MerchantController, MerchantUpdateOrderController
 from app.controller.transactionController import *
 
 routes = {
@@ -10,5 +10,6 @@ routes = {
     "/transaction/create": TransactionCreateController(),
     "/transaction/confirm": TransactionConfirmController(),
     "/transaction/verify": TransactionVerifyController(),
-    "/transaction/cancel": TransactionCancelController()
+    "/transaction/cancel": TransactionCancelController(),
+    "/merchant/update": MerchantUpdateOrderController()
 }

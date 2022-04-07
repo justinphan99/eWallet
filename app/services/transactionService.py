@@ -1,10 +1,15 @@
+import re
 import uuid
+from app.services.merchantService import select_a_merchant
 from app.utils.baseFunc import decode_auth_token
 import hashlib
 import json
 from app.services.accountService import *
 from app.utils.decorator import tokenMerchantRequired, tokenPersonalRequired
 from app.utils.baseFunc import connection
+from app.utils.timeOut import timeout
+import time
+import requests
 
 def select_a_transaction(transactionId,conn):
     try:
@@ -40,53 +45,112 @@ def select_a_transaction(transactionId,conn):
         return 404
 
 
-@tokenMerchantRequired
-def create_a_transaction(token, data):
-    transactionId = str(uuid.uuid4())
-    merchantId = data['merchantId']
-    incomeAccount = decode_auth_token(token)
-    amount = data['amount']
-    extraData = data['extraData']
-    dataTemp = {"merchantId": merchantId, "amount": amount, "extraData": extraData}
-    signature = hashlib.md5(json.dumps(dataTemp).encode('utf-8')).hexdigest()
-    status = 'INITIALIZED'
+@timeout(5)
+def check_transaction_status(transactionId, conn):
     try:
-        conn = connection()
-        query = """INSERT INTO public.transaction 
-        (transactionId, merchantId, incomeAccount, amount, extraData, signature, status)
-        VALUES ('{0}','{1}', '{2}', {3}, '{4}', '{5}', '{6}');""".format(transactionId, merchantId, incomeAccount, amount, extraData, signature, status)
-        cur = conn.cursor()
-        cur.execute(query)
-        conn.commit()    
-        print("create a transaction")
         data = select_a_transaction(transactionId, conn)
-        return data
-    
-    except Exception as e:
-        print(">>> Cannot create transaction")
-        print("Error: " +str(e))
-        return 404
+        status = data['status']
+        print(status)
+        if status == "COMPLETED":
+            return 1
+        else:
+            return check_transaction_status(transactionId,conn)
+    except:
+        print("outtttttt")
 
-    finally:
-        if conn is not None:
-            cur.close()
-            conn.close()
 
+@tokenMerchantRequired
+@timeout(5)
+def create_a_transaction(token, data):
+    try:
+        transactionId = str(uuid.uuid4())
+        merchantId = data['merchantId']
+        incomeAccount = decode_auth_token(token)
+        amount = data['amount']
+        extraData = data['extraData']
+        dataTemp = {"merchantId": merchantId, "amount": amount, "extraData": extraData}
+        signature = hashlib.md5(json.dumps(dataTemp).encode('utf-8')).hexdigest()
+        status = 'INITIALIZED'
+        try:
+            conn = connection()
+            query = """INSERT INTO public.transaction 
+            (transactionId, merchantId, incomeAccount, amount, extraData, signature, status)
+            VALUES ('{0}','{1}', '{2}', {3}, '{4}', '{5}', '{6}');""".format(transactionId, merchantId, incomeAccount, amount, extraData, signature, status)
+            cur = conn.cursor()
+            cur.execute(query)
+            conn.commit()    
+            print("create a transaction")
+            data = select_a_transaction(transactionId, conn)
+            print("not time out")
+            return data
+        
+        except Exception as e:
+            print(">>> Cannot create transaction")
+            print("Error: " +str(e))
+            return 404
+
+        finally:
+            if conn is not None:
+                cur.close()
+                conn.close()
+    except TimeoutError():
+        print("time out")
+        transactionId = str(uuid.uuid4())
+        merchantId = data['merchantId']
+        incomeAccount = decode_auth_token(token)
+        amount = data['amount']
+        extraData = data['extraData']
+        dataTemp = {"merchantId": merchantId, "amount": amount, "extraData": extraData}
+        signature = hashlib.md5(json.dumps(dataTemp).encode('utf-8')).hexdigest()
+        status = 'EXPIRED'
+        merchantUrl = select_a_transaction(merchantId, conn)['merchantUrl']
+        order_data = {
+            "order_id": extraData,
+            "payment_status": "EXPIRED"
+        }
+        try:
+            conn = connection()
+            query = """INSERT INTO public.transaction 
+            (transactionId, merchantId, incomeAccount, amount, extraData, signature, status)
+            VALUES ('{0}','{1}', '{2}', {3}, '{4}', '{5}', '{6}');""".format(transactionId, merchantId, incomeAccount, amount, extraData, signature, status)
+            cur = conn.cursor()
+            cur.execute(query)
+            conn.commit()    
+            print("create a transaction")
+            data = select_a_transaction(transactionId, conn)
+            print("not time out")
+
+            requests.post(url=merchantUrl, data=order_data)
+
+            return data
+        
+        except Exception as e:
+            print(">>> Cannot create transaction")
+            print("Error: " +str(e))
+            return 404
+
+        finally:
+            if conn is not None:
+                cur.close()
+                conn.close()
+     
 
 @tokenPersonalRequired
 def confirm_a_transaction(token, data):
     conn = connection()
     accountPersonalId = decode_auth_token(token)
     transactionId = data['transactionId']
+    
     balance_account = float(select_an_account(accountPersonalId,conn)["balance"])
     amount_transaction = float(select_a_transaction(transactionId, conn)["amount"])
+
     if balance_account>0 and balance_account>=amount_transaction:
         status = 'CONFIRMED'
     else:
         status = 'FAILED'
     try:
-        query = """UPDATE public.transaction SET status = '{0}'
-        WHERE transaction.transactionId = '{1}'""".format(status, transactionId)
+        query = """UPDATE public.transaction SET status = '{0}', outcomeAccount = '{1}'
+        WHERE transaction.transactionId = '{2}'""".format(status, accountPersonalId, transactionId)
         cur = conn.cursor()
         cur.execute(query)
         conn.commit()    
@@ -95,9 +159,14 @@ def confirm_a_transaction(token, data):
             "code": "SUC",
             "message": "transaction {}".format(status)
         }
+
+        #update_order_status(transactionId,status,conn)
+
         return data
         
     except Exception as e:
+        status = "FAILED"
+        update_transaction_status(transactionId,status,conn)
         print(">>> Cannot update transaction")
         print("Error: " +str(e))
         return 404
@@ -115,6 +184,7 @@ def verify_a_transaction(token, data):
     transactionId = data['transactionId']
     balance_account = float(select_an_account(accountPersonalId,conn)["balance"])
     amount_transaction = float(select_a_transaction(transactionId, conn)["amount"])
+
     if balance_account>0 and balance_account>=amount_transaction:
         status = 'VERIFIED'
         balance_account = balance_account - amount_transaction
@@ -123,15 +193,15 @@ def verify_a_transaction(token, data):
     try:
         query = """UPDATE public.transaction SET status = '{0}', outcomeAccount = '{1}'
         WHERE transaction.transactionId = '{2}'""".format(status, accountPersonalId, transactionId)
-        print(query)
         cur = conn.cursor()
         cur.execute(query)
 
         query = """UPDATE public.account SET balance = {0}
         WHERE account.accountId = '{1}'""".format(balance_account, accountPersonalId)
-        print(query)
         cur.execute(query)
         conn.commit()
+
+        #update_order_status(transactionId,status,conn)
 
         print("verify a transaction")
 
@@ -139,9 +209,12 @@ def verify_a_transaction(token, data):
             "code": "200",
             "message": "transaction {}".format(status)
         }
+
         return data
     
     except Exception as e:
+        status = "FAILED"
+        update_transaction_status(transactionId,status,conn)
         print(">>> Cannot update transaction")
         print("Error: " +str(e))
         return 404
@@ -157,23 +230,27 @@ def cancel_a_transaction(token, data):
     conn = connection()
     transactionId = data['transactionId']
     status = 'CANCELED'
+
     try:
         query = """UPDATE public.transaction SET status = '{0}'
         WHERE transaction.transactionId = '{1}'""".format(status, transactionId)
-        print(query)
         cur = conn.cursor()
         cur.execute(query)
         conn.commit()
-
         print("cancel a transaction")
 
         data = {
             "code": "200",
             "message": "transaction {}".format(status)
         }
+        
+        #update_order_status(transactionId,status,conn)
+
         return data
     
     except Exception as e:
+        status = "FAILED"
+        update_transaction_status(transactionId,status,conn)
         print(">>> Cannot cancel transaction")
         print("Error: " +str(e))
         return 404
@@ -182,3 +259,32 @@ def cancel_a_transaction(token, data):
         if conn is not None:
             cur.close()
             conn.close()
+
+def update_transaction_status(transactionId, status, conn):
+    query = """UPDATE public.transaction SET status = '{0}'
+    WHERE transaction.transactionId = '{1}'""".format(status, transactionId)
+    try:
+        cur = conn.cursor()
+        cur.execute(query)
+        conn.commit()    
+        return 200
+    except:
+        return 404
+
+def update_order_status(transactionId, payment_status, conn):
+    extraData = select_a_transaction(transactionId, conn)["extraData"]
+    merchantId = select_a_transaction(transactionId, conn)["merchantId"]
+    url = select_a_merchant(merchantId,'',conn)['merchantUrl']
+    data = {
+        "order_id": extraData,
+        "payment_status": payment_status
+    }
+    headers = {'Content-type': 'application/json'}
+    print(url)
+    print(data)
+    
+    headers = {'Content-type': 'application/json'}
+
+    a = requests.post(url=url,data=json.dumps(data), headers=headers)
+    print(a.status_code)
+    

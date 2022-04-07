@@ -1,6 +1,8 @@
 import uuid
 from app.services.accountService import create_a_merchant_account
 from app.utils.baseFunc import connection
+import requests
+import json
 
 def select_all_account():
     conn = connection()
@@ -49,11 +51,6 @@ def select_a_merchant(merchantId, accountId, conn):
         print("Error: " +str(e))
         return 404
 
-    finally:
-        if conn is not None:
-            cur.close()
-            conn.close()
-
 def create_a_merchant(data):
     conn = connection()
     try:
@@ -80,3 +77,11 @@ def create_a_merchant(data):
         if conn is not None:
             cur.close()
             conn.close()
+
+
+def merchant_update_order_status(data):
+    url = "http://127.0.0.1:5000/order/status"
+    headers = {'Content-type': 'application/json'}
+    a = requests.post(url=url,data=json.dumps(data), headers=headers)
+    print(a.json())
+    return a.json()
