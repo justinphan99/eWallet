@@ -14,12 +14,14 @@ def connection():
         print("Error: " + str(e))
     return conn
 
-def getLoggedInAccount(authToken):
+def getLoggedInAccount(authToken,data):
     if (authToken):
-        resp = decode_auth_token(authToken)
+        resp = decode_auth_token(authToken,data)
+        print(resp)
         conn = connection()
-        account = AccountService.select_an_account(resp, conn)
-        if account:
+        if resp:
+            account = AccountService.select_an_account(resp, conn)
             return account
-        return account
-    return account
+        else:
+            return None
+    return None

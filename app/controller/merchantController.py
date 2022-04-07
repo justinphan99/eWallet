@@ -1,5 +1,5 @@
 from aiohttp import request
-from app.services.merchantService import *
+from app.services.merchantService import select_a_merchant,create_a_merchant,merchant_update_order_status
 
 class MerchantController():
     def __init__(self):

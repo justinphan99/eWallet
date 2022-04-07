@@ -63,9 +63,11 @@ def check_transaction_status(transactionId, conn):
 @timeout(5)
 def create_a_transaction(token, data):
     try:
+        print(data)
         transactionId = str(uuid.uuid4())
         merchantId = data['merchantId']
-        incomeAccount = decode_auth_token(token)
+        print("9999999999999999")
+        incomeAccount = decode_auth_token(token,data)
         amount = data['amount']
         extraData = data['extraData']
         dataTemp = {"merchantId": merchantId, "amount": amount, "extraData": extraData}
@@ -97,7 +99,7 @@ def create_a_transaction(token, data):
         print("time out")
         transactionId = str(uuid.uuid4())
         merchantId = data['merchantId']
-        incomeAccount = decode_auth_token(token)
+        incomeAccount = decode_auth_token(token,data)
         amount = data['amount']
         extraData = data['extraData']
         dataTemp = {"merchantId": merchantId, "amount": amount, "extraData": extraData}
@@ -138,7 +140,7 @@ def create_a_transaction(token, data):
 @tokenPersonalRequired
 def confirm_a_transaction(token, data):
     conn = connection()
-    accountPersonalId = decode_auth_token(token)
+    accountPersonalId = decode_auth_token(token,data)
     transactionId = data['transactionId']
     
     balance_account = float(select_an_account(accountPersonalId,conn)["balance"])
@@ -180,7 +182,7 @@ def confirm_a_transaction(token, data):
 @tokenPersonalRequired
 def verify_a_transaction(token, data):
     conn = connection()
-    accountPersonalId = decode_auth_token(token)
+    accountPersonalId = decode_auth_token(token,data)
     transactionId = data['transactionId']
     balance_account = float(select_an_account(accountPersonalId,conn)["balance"])
     amount_transaction = float(select_a_transaction(transactionId, conn)["amount"])

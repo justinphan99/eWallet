@@ -1,5 +1,4 @@
 import uuid
-from app.response.badRequestHandler import BadRequestHandler
 from app.utils.baseFunc import encode_auth_token
 from app.utils.decorator import tokenIssuerRequired
 from app.utils.baseFunc import connection
@@ -68,8 +67,7 @@ def create_an_account(data):
             if conn is not None:
                 cur.close()
                 conn.close()
-    elif accountType == 'merchant':
-        return 403
+
     else:
         return 404
 
@@ -97,7 +95,7 @@ def create_a_merchant_account(accountId, merchantId):
 def get_account_token(accountId):
     conn = connection()
     data = select_an_account(accountId,conn)
-    if data == ():
+    if not data:
         return 404
     else:
         data = encode_auth_token(accountId)

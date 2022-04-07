@@ -1,6 +1,5 @@
 from functools import wraps
 import app.services.authService as auth
-from ..response.unauthorizedRequestHandler import UnauthorizedRequestHandler
 
 def tokenRequired(f):
     @wraps(f)
@@ -19,7 +18,11 @@ def tokenIssuerRequired(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         authToken = args[0]
-        response = auth.getLoggedInAccount(authToken)
+        data = args[1]
+        print(data)
+        response = auth.getLoggedInAccount(authToken,data)
+        print("Response: "+str(response))
+
         print(">>> UnauthorizedRequestHandler")
         if response == None or response['accountType'] != 'issuer':
             return 401
@@ -32,7 +35,10 @@ def tokenPersonalRequired(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         authToken = args[0]
-        response = auth.getLoggedInAccount(authToken)
+        data = args[1]
+        print(data)
+        response = auth.getLoggedInAccount(authToken,data)
+        print("Response: "+str(response))
         print(">>> UnauthorizedRequestHandler")
         if response == None or response['accountType'] != 'personal':
             print("UnauthorizedRequestHandler")
@@ -46,7 +52,10 @@ def tokenMerchantRequired(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         authToken = args[0]
-        response = auth.getLoggedInAccount(authToken)
+        data = args[1]
+        print(data)
+        response = auth.getLoggedInAccount(authToken,data)
+        print("Response: "+str(response))
         print(">>> UnauthorizedRequestHandler")
         if response == None or response['accountType'] != 'merchant':
             print("UnauthorizedRequestHandler")

@@ -1,10 +1,10 @@
 import uuid
-from app.services.accountService import create_a_merchant_account
+# from app.services.accountService import create_a_merchant_account
 from app.utils.baseFunc import connection
 import requests
 import json
 
-def select_all_account():
+def select_all_merchant():
     conn = connection()
     try:
         cur = conn.cursor()
@@ -65,7 +65,18 @@ def create_a_merchant(data):
         """.format(merchantName,merchantId,apiKey,merchantUrl))
         conn.commit()  
         print("create a merchant")
-        create_a_merchant_account(accountId,merchantId)
+        # create_a_merchant_account(accountId,merchantId)
+        try:
+            accountType = 'merchant'
+            cur.execute("""INSERT INTO public.account (accountId, accountType, merchantId)
+            VALUES ('{0}','{1}','{2}')""".format(accountId,accountType,merchantId))
+            conn.commit()    
+            print("create a merchant account")
+        except:
+            print(">>> Cannot create merchant account")
+            print("Error: " +str(e))
+            return 404
+
         data = select_a_merchant(merchantId, accountId, conn) 
         return data
     except Exception as e:

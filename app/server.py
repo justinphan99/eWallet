@@ -41,6 +41,7 @@ class Server(BaseHTTPRequestHandler):
                 temp = tempRoutes[self.path]
                 temp.method = 'GET'
                 data = temp.operation(token,'', param, '')
+                print(data)
                 if data == 401:
                     handler = UnauthorizedRequestHandler()
                 elif data == 404:
@@ -113,7 +114,6 @@ class Server(BaseHTTPRequestHandler):
             content = handler.getContents()
         else:
             content = json.dumps(handler.getContents())
-
         self.end_headers()
 
         return content.encode()

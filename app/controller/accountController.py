@@ -1,4 +1,4 @@
-from app.services.accountService import *
+from app.services.accountService import select_all_account,create_an_account,get_account_token,topup_account
 
 class AccountController():
     def __init__(self):
@@ -18,6 +18,7 @@ class AccountTokenController():
         
     def operation(self,token,data,param,query):
         if self.method == "GET":
+            print("GET ACCOUNT TOKEN")
             return get_account_token(param)
         elif self.method == "POST":
             pass
