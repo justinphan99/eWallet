@@ -129,14 +129,13 @@ def decode_auth_token(auth_token, data):
     try:
         conn = connection()
         print("data: " +str(data))
-        
+
         if 'merchantId' in data:
             merchantId = data['merchantId']
             key=select_a_merchant(merchantId,'',conn)['apiKey']
         elif 'transactionId' in data:
             key = '8a2a77be-b657-11ec-b909-0242ac120002'
-        
-        if not key:
+        else:
             key = '8a2a77be-b657-11ec-b909-0242ac120002'
         
         print("key: "+str(key))

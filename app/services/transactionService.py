@@ -158,7 +158,7 @@ def confirm_a_transaction(token, data):
         conn.commit()    
         print("confirm a transaction")
         data = {
-            "code": "SUC",
+            "code": status,
             "message": "transaction {}".format(status)
         }
 
@@ -208,7 +208,7 @@ def verify_a_transaction(token, data):
         print("verify a transaction")
 
         data = {
-            "code": "200",
+            "code": status,
             "message": "transaction {}".format(status)
         }
 
@@ -242,12 +242,10 @@ def cancel_a_transaction(token, data):
         print("cancel a transaction")
 
         data = {
-            "code": "200",
+            "code": status,
             "message": "transaction {}".format(status)
         }
-        
         #update_order_status(transactionId,status,conn)
-
         return data
     
     except Exception as e:
